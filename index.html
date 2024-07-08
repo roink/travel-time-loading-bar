@@ -11,15 +11,15 @@
             text-align: center;
             margin-top: 50px;
         }
-        #loading-bar-container {
+        #loading-bar-container, #loading-bar-container-2 {
             width: 80%;
-            margin: 0 auto;
+            margin: 20px auto;
             border: 1px solid #000;
             border-radius: 5px;
             height: 30px;
             overflow: hidden;
         }
-        #loading-bar {
+        #loading-bar, #loading-bar-2 {
             height: 100%;
             background-color: #4caf50;
             text-align: right;
@@ -35,39 +35,46 @@
 <div id="loading-bar-container">
     <div id="loading-bar">0%</div>
 </div>
+<div id="loading-bar-container-2">
+    <div id="loading-bar-2">0%</div>
+</div>
 
 <script>
     function updateLoadingBar() {
-        // Start time: 08:42
-        const startTime = new Date();
-        startTime.setHours(8);
-        startTime.setMinutes(42);
-        startTime.setSeconds(0);
-        startTime.setMilliseconds(0);
+        // First time range: 08:42 to 21:15
+        const startTime1 = new Date();
+        startTime1.setHours(8, 42, 0, 0);
+        const endTime1 = new Date();
+        endTime1.setHours(21, 15, 0, 0);
         
-        // End time: 21:15
-        const endTime = new Date();
-        endTime.setHours(21);
-        endTime.setMinutes(15);
-        endTime.setSeconds(0);
-        endTime.setMilliseconds(0);
+        // Second time range: 21:28 to 22:31
+        const startTime2 = new Date();
+        startTime2.setHours(21, 28, 0, 0);
+        const endTime2 = new Date();
+        endTime2.setHours(22, 31, 0, 0);
         
         // Current time
         const now = new Date();
         
-        // Calculate total travel time in minutes
-        const totalTravelTime = (endTime - startTime) / 1000 / 60;
+        // Calculate total travel time and elapsed time for the first bar
+        const totalTravelTime1 = (endTime1 - startTime1) / 1000 / 60;
+        const elapsedTime1 = (now - startTime1) / 1000 / 60;
+        const percentageCompleted1 = (elapsedTime1 / totalTravelTime1) * 100;
         
-        // Calculate elapsed time in minutes
-        const elapsedTime = (now - startTime) / 1000 / 60;
+        // Update the first loading bar
+        const loadingBar1 = document.getElementById('loading-bar');
+        loadingBar1.style.width = Math.min(100, Math.max(0, percentageCompleted1)) + '%';
+        loadingBar1.innerText = Math.min(100, Math.max(0, percentageCompleted1.toFixed(2))) + '%';
         
-        // Calculate percentage completed
-        const percentageCompleted = (elapsedTime / totalTravelTime) * 100;
+        // Calculate total travel time and elapsed time for the second bar
+        const totalTravelTime2 = (endTime2 - startTime2) / 1000 / 60;
+        const elapsedTime2 = (now - startTime2) / 1000 / 60;
+        const percentageCompleted2 = (elapsedTime2 / totalTravelTime2) * 100;
         
-        // Update loading bar
-        const loadingBar = document.getElementById('loading-bar');
-        loadingBar.style.width = percentageCompleted + '%';
-        loadingBar.innerText = Math.min(100, Math.max(0, percentageCompleted.toFixed(2))) + '%';
+        // Update the second loading bar
+        const loadingBar2 = document.getElementById('loading-bar-2');
+        loadingBar2.style.width = Math.min(100, Math.max(0, percentageCompleted2)) + '%';
+        loadingBar2.innerText = Math.min(100, Math.max(0, percentageCompleted2.toFixed(2))) + '%';
     }
     
     updateLoadingBar();
