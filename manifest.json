@@ -1,7 +1,7 @@
 {
     "name": "Travel Time Loading Bar",
     "short_name": "TravelBar",
-    "start_url": "/travel-time-loading-bar/index.html",
+    "start_url": "/travel-time-loading-bar/",
     "display": "standalone",
     "background_color": "#ffffff",
     "description": "A simple app to track travel time progress",
