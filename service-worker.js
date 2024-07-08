@@ -2,10 +2,10 @@ self.addEventListener('install', function(event) {
     event.waitUntil(
         caches.open('travel-time-cache').then(function(cache) {
             return cache.addAll([
-                '/',
-                '/index.html',
-                '/manifest.json',
-                '/icon.png'
+                '/travel-time-loading-bar/',
+                '/travel-time-loading-bar/index.html',
+                '/travel-time-loading-bar/manifest.json',
+                '/travel-time-loading-bar/icon.png'
             ]);
         })
     );
