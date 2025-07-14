@@ -267,6 +267,11 @@
             }
         });
         function startDrag(e) {
+            const rect = wrapper.getBoundingClientRect();
+            wrapper.style.width  = rect.width + 'px';
+            wrapper.style.height = rect.height + 'px';
+            wrapper.style.left   = rect.left + 'px';
+            wrapper.style.top    = rect.top + 'px';
             wrapper.classList.add('dragging');
             document.body.appendChild(wrapper);
             moveDrag(e);
@@ -300,12 +305,18 @@
                 if (b) bars.push(b);
             });
             saveBars();
-            wrapper.style.left = wrapper.style.top = '';
+            wrapper.style.width =
+            wrapper.style.height =
+            wrapper.style.left =
+            wrapper.style.top = '';
         }
         function cancelDrag() {
             wrapper.classList.remove('dragging');
             barsContainer.appendChild(wrapper);
-            wrapper.style.left = wrapper.style.top = '';
+            wrapper.style.width =
+            wrapper.style.height =
+            wrapper.style.left =
+            wrapper.style.top = '';
         }
         edit.addEventListener('click', () => {
             editingBar = barObj;
