@@ -83,6 +83,7 @@
 
 <script>
     const bars = [];
+    let draggedBar = null;
     const overlay = document.getElementById('form-overlay');
     const addBtn = document.getElementById('add-btn');
     const cancelBtn = document.getElementById('cancel-btn');
@@ -91,6 +92,17 @@
     const startInput = document.getElementById('bar-start');
     const endInput = document.getElementById('bar-end');
     const barsContainer = document.getElementById('bars-container');
+    barsContainer.addEventListener('dragover', (e) => e.preventDefault());
+    barsContainer.addEventListener('drop', (e) => {
+        if (!draggedBar) return;
+        e.preventDefault();
+        barsContainer.appendChild(draggedBar.wrapper);
+        const from = bars.indexOf(draggedBar);
+        if (from === -1) return;
+        bars.splice(from, 1);
+        bars.push(draggedBar);
+        saveBars();
+    });
 
     function validateForm() {
         addBtn.disabled = !(nameInput.value && startInput.value && endInput.value);
@@ -145,6 +157,36 @@
         barsContainer.appendChild(wrapper);
 
         const barObj = { name, start, end, el: barEl, wrapper };
+
+        wrapper.draggable = true;
+        wrapper.addEventListener('dragstart', (e) => {
+            draggedBar = barObj;
+            wrapper.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        wrapper.addEventListener('dragend', () => {
+            draggedBar = null;
+            wrapper.style.opacity = '';
+        });
+        wrapper.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        wrapper.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!draggedBar || draggedBar === barObj) return;
+            const rect = wrapper.getBoundingClientRect();
+            const before = e.clientY < rect.top + rect.height / 2;
+            const from = bars.indexOf(draggedBar);
+            let to = bars.indexOf(barObj);
+            if (from === -1 || to === -1) return;
+            if (!before) to++;
+            if (from < to) to--;
+            if (from === to) return;
+            bars.splice(from, 1);
+            bars.splice(to, 0, draggedBar);
+            barsContainer.insertBefore(draggedBar.wrapper, before ? barObj.wrapper : barObj.wrapper.nextSibling);
+            saveBars();
+        });
         remove.addEventListener('click', () => {
             barsContainer.removeChild(wrapper);
             const idx = bars.indexOf(barObj);
