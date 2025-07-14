@@ -1,0 +1,16 @@
+{
+  "name": "travel-time-loading-bar",
+  "version": "1.0.0",
+  "description": "Progress bars showing elapsed portion of a journey.",
+  "scripts": {
+    "test": "jest --passWithNoTests"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jsdom": "^24.0.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom"
+  }
+}
