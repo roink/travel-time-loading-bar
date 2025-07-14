@@ -11,7 +11,7 @@
             text-align: center;
             margin-top: 50px;
         }
-        #loading-bar-container, #loading-bar-container-2 {
+        .bar-container {
             width: 80%;
             margin: 20px auto;
             border: 1px solid #000;
@@ -19,7 +19,7 @@
             height: 30px;
             overflow: hidden;
         }
-        #loading-bar, #loading-bar-2 {
+        .loading-bar {
             height: 100%;
             background-color: #4caf50;
             text-align: right;
@@ -27,62 +27,164 @@
             color: white;
             line-height: 30px;
         }
+        #add-bar-btn {
+            font-size: 24px;
+            padding: 10px 15px;
+            margin-top: 20px;
+        }
+        .remove-btn {
+            margin-left: 10px;
+        }
+        #form-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        #new-bar-form {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
 
 <h1>Travel Time Loading Bar</h1>
-<p>Köln -> Trutnov</p>
-<div id="loading-bar-container">
-    <div id="loading-bar">0%</div>
-</div>
-<p>Mannheim -> Prag</p>
-<div id="loading-bar-container-2">
-    <div id="loading-bar-2">0%</div>
+<div id="bars-container"></div>
+<button id="add-bar-btn">+</button>
+
+<div id="form-overlay">
+    <div id="new-bar-form">
+        <div>
+            <label>Name: <input type="text" id="bar-name"></label>
+        </div>
+        <div>
+            <label>Start Time: <input type="datetime-local" id="bar-start"></label>
+        </div>
+        <div>
+            <label>End Time: <input type="datetime-local" id="bar-end"></label>
+        </div>
+        <button id="add-btn" disabled>Add</button>
+        <button id="cancel-btn">Cancel</button>
+    </div>
 </div>
 
 <script>
-    function updateLoadingBar() {
-        // First time range: yesterday 20:55 to today 13:20
-        const startTime1 = new Date();
-        startTime1.setDate(startTime1.getDate() - 1);
-        startTime1.setHours(20, 55, 0, 0);
-        const endTime1 = new Date();
-        endTime1.setHours(13, 20, 0, 0);
+    const bars = [];
 
-        // Second time range: yesterday 23:42 to today 09:26
-        const startTime2 = new Date();
-        startTime2.setDate(startTime2.getDate() - 1);
-        startTime2.setHours(23, 42, 0, 0);
-        const endTime2 = new Date();
-        endTime2.setHours(9, 26, 0, 0);
-        
-        // Current time
-        const now = new Date();
-        
-        // Calculate total travel time and elapsed time for the first bar
-        const totalTravelTime1 = (endTime1 - startTime1) / 1000 / 60;
-        const elapsedTime1 = (now - startTime1) / 1000 / 60;
-        const percentageCompleted1 = (elapsedTime1 / totalTravelTime1) * 100;
-        
-        // Update the first loading bar
-        const loadingBar1 = document.getElementById('loading-bar');
-        loadingBar1.style.width = Math.min(100, Math.max(0, percentageCompleted1)) + '%';
-        loadingBar1.innerText = Math.min(100, Math.max(0, percentageCompleted1.toFixed(2))) + '%';
-        
-        // Calculate total travel time and elapsed time for the second bar
-        const totalTravelTime2 = (endTime2 - startTime2) / 1000 / 60;
-        const elapsedTime2 = (now - startTime2) / 1000 / 60;
-        const percentageCompleted2 = (elapsedTime2 / totalTravelTime2) * 100;
-
-        // Update the second loading bar
-        const loadingBar2 = document.getElementById('loading-bar-2');
-        loadingBar2.style.width = Math.min(100, Math.max(0, percentageCompleted2)) + '%';
-        loadingBar2.innerText = Math.min(100, Math.max(0, percentageCompleted2.toFixed(2))) + '%';
+    function saveBars() {
+        const data = bars.map(b => ({
+            name: b.name,
+            start: b.start.toISOString(),
+            end: b.end.toISOString()
+        }));
+        localStorage.setItem('bars', JSON.stringify(data));
     }
-    
-    updateLoadingBar();
-    setInterval(updateLoadingBar, 1000); // Update every second
+
+    function addBar(name, start, end, store = true) {
+        const wrapper = document.createElement('div');
+        const header = document.createElement('p');
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'x';
+        removeBtn.className = 'remove-btn';
+        header.textContent = name;
+        header.appendChild(removeBtn);
+        wrapper.appendChild(header);
+
+        const container = document.createElement('div');
+        container.className = 'bar-container';
+        const barEl = document.createElement('div');
+        barEl.className = 'loading-bar';
+        barEl.textContent = '0%';
+        container.appendChild(barEl);
+        wrapper.appendChild(container);
+
+        barsContainer.appendChild(wrapper);
+
+        const barObj = { name, start, end, el: barEl, wrapper };
+        bars.push(barObj);
+
+        removeBtn.addEventListener('click', () => {
+            barsContainer.removeChild(wrapper);
+            bars.splice(bars.indexOf(barObj), 1);
+            saveBars();
+        });
+
+        if (store) saveBars();
+    }
+    const overlay = document.getElementById('form-overlay');
+    const addBtn = document.getElementById('add-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const showBtn = document.getElementById('add-bar-btn');
+    const nameInput = document.getElementById('bar-name');
+    const startInput = document.getElementById('bar-start');
+    const endInput = document.getElementById('bar-end');
+    const barsContainer = document.getElementById('bars-container');
+
+    function validateForm() {
+        addBtn.disabled = !(nameInput.value && startInput.value && endInput.value);
+    }
+
+    nameInput.addEventListener('input', validateForm);
+    startInput.addEventListener('input', validateForm);
+    endInput.addEventListener('input', validateForm);
+
+    showBtn.addEventListener('click', () => {
+        overlay.style.display = 'flex';
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+        nameInput.value = '';
+        startInput.value = '';
+        endInput.value = '';
+        validateForm();
+    });
+
+    addBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name || !startInput.value || !endInput.value) return;
+
+        const start = new Date(startInput.value);
+        const end = new Date(endInput.value);
+
+        addBar(name, start, end);
+
+        overlay.style.display = 'none';
+        nameInput.value = '';
+        startInput.value = '';
+        endInput.value = '';
+        validateForm();
+    });
+
+    function loadBars() {
+        const data = JSON.parse(localStorage.getItem('bars') || '[]');
+        data.forEach(b => {
+            addBar(b.name, new Date(b.start), new Date(b.end), false);
+        });
+    }
+
+    function updateBars() {
+        const now = new Date();
+        bars.forEach(bar => {
+            const total = (bar.end - bar.start) / 1000 / 60;
+            const elapsed = (now - bar.start) / 1000 / 60;
+            const perc = (elapsed / total) * 100;
+            const width = Math.min(100, Math.max(0, perc));
+            bar.el.style.width = width + '%';
+            bar.el.innerText = width.toFixed(2) + '%';
+        });
+    }
+
+    loadBars();
+    updateBars();
+    setInterval(updateBars, 1000);
 </script>
 
 <script>
