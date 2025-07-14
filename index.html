@@ -46,6 +46,13 @@
         .bar-wrapper {
             touch-action: none;
         }
+        .bar-wrapper.dragging {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1000;
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
         #add-bar-btn {
             font-size: 24px;
             padding: 10px 15px;
@@ -221,43 +228,85 @@
             barsContainer.insertBefore(draggedBar.wrapper, before ? barObj.wrapper : barObj.wrapper.nextSibling);
             saveBars();
         });
-        // Pointer events for mobile browsers where HTML drag and drop is not supported
-        wrapper.addEventListener('pointerdown', (e) => {
+        // Mobile long-press based drag & drop
+        let longPressTimer = null;
+        let pointerOffset = { x: 0, y: 0 };
+        wrapper.addEventListener('pointerdown', e => {
             if (e.pointerType === 'mouse') return;
-            draggedBar = barObj;
+            const rect = wrapper.getBoundingClientRect();
+            pointerOffset.x = e.clientX - rect.left;
+            pointerOffset.y = e.clientY - rect.top;
             wrapper.setPointerCapture(e.pointerId);
-            wrapper.style.opacity = '0.5';
+            longPressTimer = setTimeout(() => {
+                startDrag(e);
+            }, 300);
         });
-        wrapper.addEventListener('pointermove', (e) => {
-            if (draggedBar !== barObj) return;
-            e.preventDefault();
-            const target = document.elementFromPoint(e.clientX, e.clientY);
-            let drop = target;
-            while (drop && drop !== barsContainer && !drop.classList.contains('bar-wrapper')) {
-                drop = drop.parentElement;
+        wrapper.addEventListener('pointermove', e => {
+            if (wrapper.classList.contains('dragging')) {
+                e.preventDefault();
+                moveDrag(e);
+            } else {
+                const dx = Math.abs(e.movementX), dy = Math.abs(e.movementY);
+                if (dx + dy > 10 && longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                }
             }
-            if (!drop || drop === wrapper) return;
-            const rect = drop.getBoundingClientRect();
-            const before = e.clientY < rect.top + rect.height / 2;
-            const from = bars.indexOf(barObj);
-            let to = bars.findIndex(b => b.wrapper === drop);
-            if (from === -1 || to === -1) return;
-            if (!before) to++;
-            if (from < to) to--;
-            if (from === to) return;
-            bars.splice(from, 1);
-            bars.splice(to, 0, barObj);
-            barsContainer.insertBefore(wrapper, before ? drop : drop.nextSibling);
         });
-        function endPointerDrag(e) {
-            if (draggedBar !== barObj) return;
-            wrapper.style.opacity = '';
+        wrapper.addEventListener('pointerup', e => {
+            clearTimeout(longPressTimer);
             wrapper.releasePointerCapture(e.pointerId);
-            draggedBar = null;
-            saveBars();
+            if (wrapper.classList.contains('dragging')) {
+                endDrag(e);
+            }
+        });
+        wrapper.addEventListener('pointercancel', () => {
+            clearTimeout(longPressTimer);
+            if (wrapper.classList.contains('dragging')) {
+                cancelDrag();
+            }
+        });
+        function startDrag(e) {
+            wrapper.classList.add('dragging');
+            document.body.appendChild(wrapper);
+            moveDrag(e);
         }
-        wrapper.addEventListener('pointerup', endPointerDrag);
-        wrapper.addEventListener('pointercancel', endPointerDrag);
+        function moveDrag(e) {
+            wrapper.style.left = (e.clientX - pointerOffset.x) + 'px';
+            wrapper.style.top  = (e.clientY - pointerOffset.y) + 'px';
+        }
+        function endDrag(e) {
+            wrapper.classList.remove('dragging');
+            const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+            let insertBeforeEl = null;
+            if (dropTarget) {
+                const candidate = dropTarget.closest('.bar-wrapper');
+                if (candidate && candidate !== wrapper) {
+                    const r = candidate.getBoundingClientRect();
+                    insertBeforeEl = (e.clientY < r.top + r.height/2)
+                        ? candidate
+                        : candidate.nextSibling;
+                }
+            }
+            if (insertBeforeEl) {
+                barsContainer.insertBefore(wrapper, insertBeforeEl);
+            } else {
+                barsContainer.appendChild(wrapper);
+            }
+            const oldBars = bars.slice();
+            bars.length = 0;
+            barsContainer.querySelectorAll('.bar-wrapper').forEach(w => {
+                const b = oldBars.find(x => x.wrapper === w);
+                if (b) bars.push(b);
+            });
+            saveBars();
+            wrapper.style.left = wrapper.style.top = '';
+        }
+        function cancelDrag() {
+            wrapper.classList.remove('dragging');
+            barsContainer.appendChild(wrapper);
+            wrapper.style.left = wrapper.style.top = '';
+        }
         edit.addEventListener('click', () => {
             editingBar = barObj;
             addBtn.textContent = 'Save';
