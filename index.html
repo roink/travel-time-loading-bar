@@ -29,11 +29,18 @@
         }
         .bar-header {
             display: flex;
-            justify-content: center;
             align-items: center;
         }
-        .remove-btn {
-            margin-left: 10px;
+        .bar-label {
+            flex-grow: 1;
+            text-align: center;
+        }
+        .bar-actions {
+            display: flex;
+            gap: 5px;
+            margin-left: auto;
+        }
+        .remove-btn, .edit-btn {
             cursor: pointer;
         }
         #add-bar-btn {
@@ -84,6 +91,7 @@
 <script>
     const bars = [];
     let draggedBar = null;
+    let editingBar = null;
     const overlay = document.getElementById('form-overlay');
     const addBtn = document.getElementById('add-btn');
     const cancelBtn = document.getElementById('cancel-btn');
@@ -108,16 +116,30 @@
         addBtn.disabled = !(nameInput.value && startInput.value && endInput.value);
     }
 
+    function toDateTimeLocal(date) {
+        const off = date.getTimezoneOffset();
+        const d = new Date(date.getTime() - off * 60000);
+        return d.toISOString().slice(0,16);
+    }
+
     nameInput.addEventListener('input', validateForm);
     startInput.addEventListener('input', validateForm);
     endInput.addEventListener('input', validateForm);
 
     showBtn.addEventListener('click', () => {
+        editingBar = null;
+        addBtn.textContent = 'Add';
         overlay.style.display = 'flex';
+        nameInput.value = '';
+        startInput.value = '';
+        endInput.value = '';
+        validateForm();
     });
 
     cancelBtn.addEventListener('click', () => {
         overlay.style.display = 'none';
+        editingBar = null;
+        addBtn.textContent = 'Add';
         nameInput.value = '';
         startInput.value = '';
         endInput.value = '';
@@ -138,12 +160,20 @@
         const header = document.createElement('div');
         header.className = 'bar-header';
         const label = document.createElement('span');
+        label.className = 'bar-label';
         label.textContent = name;
+        const actions = document.createElement('div');
+        actions.className = 'bar-actions';
+        const edit = document.createElement('button');
+        edit.className = 'edit-btn';
+        edit.textContent = '\u2699';
         const remove = document.createElement('button');
         remove.className = 'remove-btn';
-        remove.textContent = '×';
+        remove.textContent = '\u00d7';
+        actions.appendChild(edit);
+        actions.appendChild(remove);
         header.appendChild(label);
-        header.appendChild(remove);
+        header.appendChild(actions);
         wrapper.appendChild(header);
 
         const container = document.createElement('div');
@@ -156,7 +186,7 @@
 
         barsContainer.appendChild(wrapper);
 
-        const barObj = { name, start, end, el: barEl, wrapper };
+        const barObj = { name, start, end, el: barEl, wrapper, label };
 
         wrapper.draggable = true;
         wrapper.addEventListener('dragstart', (e) => {
@@ -187,6 +217,15 @@
             barsContainer.insertBefore(draggedBar.wrapper, before ? barObj.wrapper : barObj.wrapper.nextSibling);
             saveBars();
         });
+        edit.addEventListener('click', () => {
+            editingBar = barObj;
+            addBtn.textContent = 'Save';
+            nameInput.value = barObj.name;
+            startInput.value = toDateTimeLocal(barObj.start);
+            endInput.value = toDateTimeLocal(barObj.end);
+            overlay.style.display = 'flex';
+            validateForm();
+        });
         remove.addEventListener('click', () => {
             barsContainer.removeChild(wrapper);
             const idx = bars.indexOf(barObj);
@@ -216,9 +255,19 @@
         const start = new Date(startInput.value);
         const end = new Date(endInput.value);
 
-        createBar(name, start, end);
+        if (editingBar) {
+            editingBar.name = name;
+            editingBar.start = start;
+            editingBar.end = end;
+            editingBar.label.textContent = name;
+            saveBars();
+        } else {
+            createBar(name, start, end);
+        }
 
         overlay.style.display = 'none';
+        editingBar = null;
+        addBtn.textContent = 'Add';
         nameInput.value = '';
         startInput.value = '';
         endInput.value = '';
