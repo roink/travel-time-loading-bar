@@ -43,16 +43,6 @@
         .remove-btn, .edit-btn {
             cursor: pointer;
         }
-        .bar-wrapper {
-            touch-action: none;
-        }
-        .bar-wrapper.dragging {
-            position: absolute;
-            pointer-events: none;
-            z-index: 1000;
-            transform: scale(1.05);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
         #add-bar-btn {
             font-size: 24px;
             padding: 10px 15px;
@@ -100,7 +90,6 @@
 
 <script>
     const bars = [];
-    let draggedBar = null;
     let editingBar = null;
     const overlay = document.getElementById('form-overlay');
     const addBtn = document.getElementById('add-btn');
@@ -110,17 +99,6 @@
     const startInput = document.getElementById('bar-start');
     const endInput = document.getElementById('bar-end');
     const barsContainer = document.getElementById('bars-container');
-    barsContainer.addEventListener('dragover', (e) => e.preventDefault());
-    barsContainer.addEventListener('drop', (e) => {
-        if (!draggedBar) return;
-        e.preventDefault();
-        barsContainer.appendChild(draggedBar.wrapper);
-        const from = bars.indexOf(draggedBar);
-        if (from === -1) return;
-        bars.splice(from, 1);
-        bars.push(draggedBar);
-        saveBars();
-    });
 
     function validateForm() {
         addBtn.disabled = !(nameInput.value && startInput.value && endInput.value);
@@ -198,126 +176,6 @@
         barsContainer.appendChild(wrapper);
 
         const barObj = { name, start, end, el: barEl, wrapper, label };
-
-        wrapper.draggable = true;
-        wrapper.addEventListener('dragstart', (e) => {
-            draggedBar = barObj;
-            wrapper.style.opacity = '0.5';
-            e.dataTransfer.effectAllowed = 'move';
-        });
-        wrapper.addEventListener('dragend', () => {
-            draggedBar = null;
-            wrapper.style.opacity = '';
-        });
-        wrapper.addEventListener('dragover', (e) => {
-            e.preventDefault();
-        });
-        wrapper.addEventListener('drop', (e) => {
-            e.preventDefault();
-            if (!draggedBar || draggedBar === barObj) return;
-            const rect = wrapper.getBoundingClientRect();
-            const before = e.clientY < rect.top + rect.height / 2;
-            const from = bars.indexOf(draggedBar);
-            let to = bars.indexOf(barObj);
-            if (from === -1 || to === -1) return;
-            if (!before) to++;
-            if (from < to) to--;
-            if (from === to) return;
-            bars.splice(from, 1);
-            bars.splice(to, 0, draggedBar);
-            barsContainer.insertBefore(draggedBar.wrapper, before ? barObj.wrapper : barObj.wrapper.nextSibling);
-            saveBars();
-        });
-        // Mobile long-press based drag & drop
-        let longPressTimer = null;
-        let pointerOffset = { x: 0, y: 0 };
-        wrapper.addEventListener('pointerdown', e => {
-            if (e.pointerType === 'mouse') return;
-            const rect = wrapper.getBoundingClientRect();
-            pointerOffset.x = e.clientX - rect.left;
-            pointerOffset.y = e.clientY - rect.top;
-            wrapper.setPointerCapture(e.pointerId);
-            longPressTimer = setTimeout(() => {
-                startDrag(e);
-            }, 300);
-        });
-        wrapper.addEventListener('pointermove', e => {
-            if (wrapper.classList.contains('dragging')) {
-                e.preventDefault();
-                moveDrag(e);
-            } else {
-                const dx = Math.abs(e.movementX), dy = Math.abs(e.movementY);
-                if (dx + dy > 10 && longPressTimer) {
-                    clearTimeout(longPressTimer);
-                    longPressTimer = null;
-                }
-            }
-        });
-        wrapper.addEventListener('pointerup', e => {
-            clearTimeout(longPressTimer);
-            wrapper.releasePointerCapture(e.pointerId);
-            if (wrapper.classList.contains('dragging')) {
-                endDrag(e);
-            }
-        });
-        wrapper.addEventListener('pointercancel', () => {
-            clearTimeout(longPressTimer);
-            if (wrapper.classList.contains('dragging')) {
-                cancelDrag();
-            }
-        });
-        function startDrag(e) {
-            const rect = wrapper.getBoundingClientRect();
-            wrapper.style.width  = rect.width + 'px';
-            wrapper.style.height = rect.height + 'px';
-            wrapper.style.left   = rect.left + 'px';
-            wrapper.style.top    = rect.top + 'px';
-            wrapper.classList.add('dragging');
-            document.body.appendChild(wrapper);
-            moveDrag(e);
-        }
-        function moveDrag(e) {
-            wrapper.style.left = (e.clientX - pointerOffset.x) + 'px';
-            wrapper.style.top  = (e.clientY - pointerOffset.y) + 'px';
-        }
-        function endDrag(e) {
-            wrapper.classList.remove('dragging');
-            const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
-            let insertBeforeEl = null;
-            if (dropTarget) {
-                const candidate = dropTarget.closest('.bar-wrapper');
-                if (candidate && candidate !== wrapper) {
-                    const r = candidate.getBoundingClientRect();
-                    insertBeforeEl = (e.clientY < r.top + r.height/2)
-                        ? candidate
-                        : candidate.nextSibling;
-                }
-            }
-            if (insertBeforeEl) {
-                barsContainer.insertBefore(wrapper, insertBeforeEl);
-            } else {
-                barsContainer.appendChild(wrapper);
-            }
-            const oldBars = bars.slice();
-            bars.length = 0;
-            barsContainer.querySelectorAll('.bar-wrapper').forEach(w => {
-                const b = oldBars.find(x => x.wrapper === w);
-                if (b) bars.push(b);
-            });
-            saveBars();
-            wrapper.style.width =
-            wrapper.style.height =
-            wrapper.style.left =
-            wrapper.style.top = '';
-        }
-        function cancelDrag() {
-            wrapper.classList.remove('dragging');
-            barsContainer.appendChild(wrapper);
-            wrapper.style.width =
-            wrapper.style.height =
-            wrapper.style.left =
-            wrapper.style.top = '';
-        }
         edit.addEventListener('click', () => {
             editingBar = barObj;
             addBtn.textContent = 'Save';
