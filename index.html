@@ -27,6 +27,15 @@
             color: white;
             line-height: 30px;
         }
+        .bar-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .remove-btn {
+            margin-left: 10px;
+            cursor: pointer;
+        }
         #add-bar-btn {
             font-size: 24px;
             padding: 10px 15px;
@@ -103,17 +112,28 @@
         validateForm();
     });
 
-    addBtn.addEventListener('click', () => {
-        const name = nameInput.value.trim();
-        if (!name || !startInput.value || !endInput.value) return;
+    function saveBars() {
+        const stored = bars.map(b => ({
+            name: b.name,
+            start: b.start.toISOString(),
+            end: b.end.toISOString()
+        }));
+        localStorage.setItem('bars', JSON.stringify(stored));
+    }
 
-        const start = new Date(startInput.value);
-        const end = new Date(endInput.value);
-
+    function createBar(name, start, end, save = true) {
         const wrapper = document.createElement('div');
-        const label = document.createElement('p');
+        const header = document.createElement('div');
+        header.className = 'bar-header';
+        const label = document.createElement('span');
         label.textContent = name;
-        wrapper.appendChild(label);
+        const remove = document.createElement('button');
+        remove.className = 'remove-btn';
+        remove.textContent = '×';
+        header.appendChild(label);
+        header.appendChild(remove);
+        wrapper.appendChild(header);
+
         const container = document.createElement('div');
         container.className = 'bar-container';
         const barEl = document.createElement('div');
@@ -124,7 +144,37 @@
 
         barsContainer.appendChild(wrapper);
 
-        bars.push({ start, end, el: barEl });
+        const barObj = { name, start, end, el: barEl, wrapper };
+        remove.addEventListener('click', () => {
+            barsContainer.removeChild(wrapper);
+            const idx = bars.indexOf(barObj);
+            if (idx !== -1) bars.splice(idx, 1);
+            saveBars();
+        });
+
+        bars.push(barObj);
+        if (save) saveBars();
+    }
+
+    function loadBars() {
+        try {
+            const stored = JSON.parse(localStorage.getItem('bars') || '[]');
+            stored.forEach(b => {
+                createBar(b.name, new Date(b.start), new Date(b.end), false);
+            });
+        } catch (e) {
+            console.error('Failed to load bars', e);
+        }
+    }
+
+    addBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name || !startInput.value || !endInput.value) return;
+
+        const start = new Date(startInput.value);
+        const end = new Date(endInput.value);
+
+        createBar(name, start, end);
 
         overlay.style.display = 'none';
         nameInput.value = '';
@@ -145,6 +195,7 @@
         });
     }
 
+    loadBars();
     setInterval(updateBars, 1000);
 </script>
 
