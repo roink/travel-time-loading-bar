@@ -43,6 +43,9 @@
         .remove-btn, .edit-btn {
             cursor: pointer;
         }
+        .bar-wrapper {
+            touch-action: none;
+        }
         #add-bar-btn {
             font-size: 24px;
             padding: 10px 15px;
@@ -157,6 +160,7 @@
 
     function createBar(name, start, end, save = true) {
         const wrapper = document.createElement('div');
+        wrapper.className = 'bar-wrapper';
         const header = document.createElement('div');
         header.className = 'bar-header';
         const label = document.createElement('span');
@@ -217,6 +221,43 @@
             barsContainer.insertBefore(draggedBar.wrapper, before ? barObj.wrapper : barObj.wrapper.nextSibling);
             saveBars();
         });
+        // Pointer events for mobile browsers where HTML drag and drop is not supported
+        wrapper.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse') return;
+            draggedBar = barObj;
+            wrapper.setPointerCapture(e.pointerId);
+            wrapper.style.opacity = '0.5';
+        });
+        wrapper.addEventListener('pointermove', (e) => {
+            if (draggedBar !== barObj) return;
+            e.preventDefault();
+            const target = document.elementFromPoint(e.clientX, e.clientY);
+            let drop = target;
+            while (drop && drop !== barsContainer && !drop.classList.contains('bar-wrapper')) {
+                drop = drop.parentElement;
+            }
+            if (!drop || drop === wrapper) return;
+            const rect = drop.getBoundingClientRect();
+            const before = e.clientY < rect.top + rect.height / 2;
+            const from = bars.indexOf(barObj);
+            let to = bars.findIndex(b => b.wrapper === drop);
+            if (from === -1 || to === -1) return;
+            if (!before) to++;
+            if (from < to) to--;
+            if (from === to) return;
+            bars.splice(from, 1);
+            bars.splice(to, 0, barObj);
+            barsContainer.insertBefore(wrapper, before ? drop : drop.nextSibling);
+        });
+        function endPointerDrag(e) {
+            if (draggedBar !== barObj) return;
+            wrapper.style.opacity = '';
+            wrapper.releasePointerCapture(e.pointerId);
+            draggedBar = null;
+            saveBars();
+        }
+        wrapper.addEventListener('pointerup', endPointerDrag);
+        wrapper.addEventListener('pointercancel', endPointerDrag);
         edit.addEventListener('click', () => {
             editingBar = barObj;
             addBtn.textContent = 'Save';
